@@ -1,0 +1,131 @@
+#Sebak Petra
+#Gazdasági és pénzügyi modellek vizsga 2022.05.05
+
+x="fb8ypq";#neptun kód
+z=charToRaw(iconv(x, "latin1", "UTF-8"))
+for (i in 1:6) v=paste("0x",z,sep="")
+e=strtoi(v)
+ax=e[1];ay=e[2];az=e[3];av=e[4];ss=sum(strtoi(v))+24
+cat("ax=",ax,"\n")
+cat("ay=",ay,"\n")
+cat("az=",az,"\n")
+cat("av=",av,"\n")
+cat("ss=",ss,"\n")
+ar=c( "FB","AAPL","AMZN","GOOG","NFLX","TSLA")
+ai=ss-6*floor(ss/6)
+ev=2020-(ss-10*floor(ss/10))
+cat("ev=",ev,"\n")
+cat("reszveny=",ar[ai+1],"\n")
+
+#1. feladat
+set.seed(ss)
+	nx=1000
+	v=matrix(c(ax,abs(ax-az),abs(ax-az),az),2)
+	w=chol(v)
+	z1=rexp(nx)
+	z2=rexp(nx)
+	zm=matrix(c(z1,z2),ncol=2)
+	zn=zm%*%w
+
+library(moments)
+
+summary(zn) #statisztikai adatok 
+skewness(zn) #ferdeség
+kurtosis(zn) #lapultság
+
+#milyen eloszlás?
+ 
+#vizsgálat az 1. oszlopra
+library("ggpubr")
+ggdensity(zn[,1], 
+          main = "Sűrűségdiagram",
+          xlab = "Értékek")
+#vizsgálat a 2. oszlopra
+ggdensity(zn[,2], 
+          main = "Sűrűségdiagram",
+          xlab = "Értékek")
+ 
+#vizsgálat a kvantilis alapjan
+library("car")
+qqPlot(zn)
+
+#POISSON ELOSZLÁS
+
+#2. feladat
+
+gbm_ciklus <- function(nsim = 100, t = 100, mu = ax, sigma = (ax+az)/(ax+ay+az), S0 = 100, dt = 1./365) {
+  gbm <- matrix(ncol = nsim, nrow = t)
+  for (simu in 1:nsim) {
+    gbm[1, simu] <- S0
+    for (day in 2:t) {
+      epsilon <- rnorm(1)
+      dt = 1 / 365
+      gbm[day, simu] <- gbm[(day-1), simu] * exp((mu - sigma * sigma / 2) * dt + sigma * epsilon * sqrt(dt))
+    }
+  }
+  return(gbm)
+}
+ 
+nsim <- 50
+t <- 100
+mu <- ax
+sigma <- (ax+az)/(ax+ay+az)
+S0 <- 100
+set.seed(ss+37)
+gbm <- gbm_ciklus(nsim, t, mu, sigma, S0)
+summary(gbm)
+
+#brown abrazolas
+
+brown <- function(){
+	set.seed(ss+37)
+	x <- y <- x.new <- y.new <- x.new.p <- y.new.p <- vector()
+	for(i in 1:100){
+		x <- rnorm(1, ax, (ax+az)/(ax+ay+az))
+		y <- rnorm(1, ax, (ax+az)/(ax+ay+az))
+    		x.new <- c(x.new, x)
+    		y.new <- c(y.new, y)
+		x.new.p <- cumsum(x.new)
+		y.new.p <- cumsum(y.new)
+		plot(x.new.p, y.new.p, type="b", main=paste("Brown folyamat\nIdo =", i,sep=""),
+		xlab="x koordinatak", ylab="y koordinatak", col=c(rep("gray", i-1), "red"), pch=c(rep(20,i-1),1))
+    }
+}
+
+brown()
+
+#3. feladat
+
+poisson <- function(){
+	set.seed(ss+17)
+	x <- y <- x.new <- y.new <- x.new.p <- y.new.p <- vector()
+	for(i in 1:500){
+		x <- rpois(1, (ax+az)/(ax+ay+az))
+		y <- rpois(1, (ax+az)/(ax+ay+az))
+    		x.new <- c(x.new, x)
+    		y.new <- c(y.new, y)
+		x.new.p <- cumsum(x.new)
+		y.new.p <- cumsum(y.new)
+		plot(x.new.p, y.new.p, type="b", main=paste("Poisson folyamat\nIdo =", i,sep=""),
+		xlab="x koordinatak", ylab="y koordinatak", col=c(rep("gray", i-1), "red"), pch=c(rep(20,i-1),1))
+	}
+    		poisson_g <- matrix(c(x.new.p,y.new.p), ncol = 2)
+		return(poisson_g)
+}
+
+poisson_generalt <- poisson()
+summary(poisson_generalt)
+
+#4-5. feladat
+
+details<-read.csv("C:/Users/Diak/Documents/Gazdasagi_es_penzugyi_modellek_vizsga/AMZN.csv")
+zaro=details$Close
+zaro
+logreturn=c()
+for(i in 1:length(zaro)-1){
+  logreturn[i]=abs(log(zaro[i+1]/zaro[i]))
+}
+chisq.test(logreturn)
+#ábrák
+hist(logreturn,main="záró árak változása, hisztogram")
+plot(logreturn)
